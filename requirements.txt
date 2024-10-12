@@ -1,0 +1,13 @@
+streamlit
+pandas
+numpy
+faiss-cpu
+youtube-transcript-api
+youtube-search-python
+transformers
+torch
+torchvision
+torchaudio
+langchain
+langchain-groq
+python-dotenv

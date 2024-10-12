@@ -8,10 +8,9 @@ def extract_video_id(youtube_url):
 
 def extract_transcript(videos_df):
     """Fetches transcripts for each video in the DataFrame and updates the DataFrame."""
-    # Initialize a new column for transcripts
     videos_df['Transcript'] = None
+    videos_df['Transcript_Language'] = None
 
-    # Iterate over each video and fetch the transcript
     for index, row in videos_df.iterrows():
         youtube_url = row['url']
         video_title = row['Title']
@@ -19,27 +18,39 @@ def extract_transcript(videos_df):
 
         if video_id:
             try:
-                # List available transcripts
                 transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                
+                # Priority order: Manual English, Auto-generated English, Any manual, Any auto-generated
+                transcript_priorities = [
+                    ('en', False),  # Manual English
+                    ('en', True),   # Auto-generated English
+                    (None, False),  # Any manual
+                    (None, True)    # Any auto-generated
+                ]
 
-                # Try to fetch the English transcript first
-                try:
-                    transcript = transcript_list.find_transcript(['en'])
-                except:
-                    # If English is not available, get the first available transcript
-                    transcript = next(iter(transcript_list))
+                for lang, is_generated in transcript_priorities:
+                    try:
+                        if lang:
+                            transcript = transcript_list.find_transcript([lang])
+                        else:
+                            transcript = next(t for t in transcript_list if t.is_generated == is_generated)
+                        
+                        if transcript.is_generated != is_generated:
+                            continue
 
-                transcript_text = " ".join([item['text'] for item in transcript.fetch()])
-                print(f"Transcript for {video_title} (Language: {transcript.language}):")
-                print(transcript_text)
+                        transcript_text = " ".join([item['text'] for item in transcript.fetch()])
+                        videos_df.at[index, 'Transcript'] = transcript_text
+                        videos_df.at[index, 'Transcript_Language'] = transcript.language
+                        print(f"Transcript found for {video_title} (Language: {transcript.language}, Auto-generated: {transcript.is_generated})")
+                        break
+                    except:
+                        continue
 
-                # Add the transcript to the DataFrame
-                videos_df.at[index, 'Transcript'] = transcript_text
+                if videos_df.at[index, 'Transcript'] is None:
+                    print(f"No suitable transcript found for {video_title}")
 
             except Exception as e:
-                # Handle any errors (e.g., no transcript available)
                 print(f"An error occurred for video '{video_title}' ({video_id}): {e}")
-                videos_df.at[index, 'Transcript'] = None
 
     return videos_df
 

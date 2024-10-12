@@ -31,6 +31,7 @@ def main():
                     progress_bar.progress(50)
                     videos_df = pd.DataFrame(videos)
                     videos_df = extract_transcript(videos_df)
+                    print(videos_df)
                     progress_bar.progress(100)
                 
                 # Filter out videos without transcripts
